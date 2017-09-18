@@ -1,0 +1,122 @@
+---
+title: "Web Scraping"
+author: "Shulin Qing"
+date: "September 12, 2017"
+output: html_document
+---
+
+```{r}
+install.packages("rvest")
+library(rvest)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+
+
+https://www.indeed.com/jobs?as_and&as_phr&as_any&as_not&as_ttl=%22Data%20Scientist%22&as_cmp&jt=all&st&sr=directhire&salary&radius=25&l&fromage=any&limit=50&sort=date&psf=advsrch
+
+job_title <-  "%22Data%20Scientist%22"
+BASE_URL <- 'https://www.indeed.com'
+ADV_URL <- paste0('https://www.indeed.com/jobs?as_and=&as_not=&as_cmp=&jt=all&st=&salary=&sr=directhire&radius=25&fromage=any&limit=50&sort=date&psf=advsrch&as_any=&as_phr=&as_ttl=', job_title)
+cat(ADV_URL)
+
+# get the html file from search url
+start_page <- read_html(ADV_URL)
+# get the total job count 
+job_count <- unlist(strsplit(start_page %>% 
+                               html_node("#searchCount") %>%
+                               html_text(), split = ' ')) 
+job_count <- as.numeric(str_replace_all(job_count[length(job_count)],',',''))
+cat('Total job count: ', job_count)
+
+# get start page job URLs
+links <- start_page %>%
+  html_nodes("h2 a") %>%
+  html_attr('href')
+
+# get result page links
+page.links <- start_page %>%
+  html_nodes(xpath = '//div[contains(@class,"pagination")]//a') %>%
+  html_attr('href')
+
+KEYWORDS <- c('Hadoop','Python','\\bSQL', 'NoSQL','\\bR\\b', 'Spark', 'SAS', 'Excel', 'AWS', 'Azure', 'Java', 'Tableau')
+
+
+# Clean the raw html - removing commas, tabs, line changers, etc  
+clean.text <- function(text)
+{
+  str_replace_all(text, regex('\r\n|\n|\t|\r|,|/|<|>|\\.'), ' ')
+}
+
+# Given running total dataframe and links to scrape skills and compute running total
+ScrapeJobLinks <- function(res, job.links){
+  for(i in 1:length(job.links)){
+    job.url <- paste0(BASE_URL,job.links[i])
+    
+    Sys.sleep(1)
+    cat(paste0('Reading job ', i, '\n'))
+    
+    tryCatch({
+      html <- read_html(job.url)
+      text <- html_text(html)
+      text <- clean.text(text)
+      df <- data.frame(skill = KEYWORDS, count = ifelse(str_detect(text, KEYWORDS), 1, 0))
+      res$running$count <- res$running$count + df$count
+      res$num_jobs <- res$num_jobs + 1
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+  }
+  return(res)
+}
+
+# For display purpose, we also need the \\b removed from the keyword set
+KEYWORDS_DISPLAY <- c('Hadoop','Python','SQL', 'NoSQL','R', 'Spark', 'SAS', 'Excel', 'AWS', 'Azure', 'Java', 'Tableau')
+
+# Create running total dataframe
+running <- data.frame(skill = KEYWORDS_DISPLAY, count = rep(0, length(KEYWORDS_DISPLAY)))
+
+# Since the indeed only display max of 20 pages from search result, we cannot use job_count but need to track by creating a num_jobs
+num_jobs <- 0
+
+# Here is our results object that contains the two stats
+results <- list("running" = running, "num_jobs" = num_jobs)
+
+if(job_count != 0){
+  cat('Scraping jobs in Start Page\n')
+  results <- ScrapeJobLinks(results, links)
+}
+
+for(p in 1:length(page.links)-1){
+  
+  cat('Moving to Next 50 jobs\n')
+  
+  # Navigate to next page
+  new.page <- read_html(paste0(BASE_URL, page.links[p]))
+  
+  # Get new page job URLs
+  links <- new.page %>%
+    html_nodes("h2 a") %>%
+    html_attr('href')
+  
+  # Scrap job links
+  results <- ScrapeJobLinks(results, links)
+}
+
+print(arrange(results$running, -count))
+
+
+lego_movie <- html("http://www.imdb.com/title/tt1490017/")
+lego_movie %>%
+  html_node("strong span") %>%
+  html_text() %>%
+  as.numeric()
+
+lego_movie %>%
+  html_nodes("#titleCast .itemprop span") %>%
+  html_text()
+
+lego_movie %>%
+  html_nodes("table") %>%
+  .[[1]] %>%
+  html_table()
+```
+
