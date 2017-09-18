@@ -104,19 +104,5 @@ for(p in 1:length(page.links)-1){
 print(arrange(results$running, -count))
 
 
-lego_movie <- html("http://www.imdb.com/title/tt1490017/")
-lego_movie %>%
-  html_node("strong span") %>%
-  html_text() %>%
-  as.numeric()
-
-lego_movie %>%
-  html_nodes("#titleCast .itemprop span") %>%
-  html_text()
-
-lego_movie %>%
-  html_nodes("table") %>%
-  .[[1]] %>%
-  html_table()
 ```
 
