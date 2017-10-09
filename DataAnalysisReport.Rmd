@@ -1,0 +1,18 @@
+---
+author: "Shulin Qing"
+date: "October 9, 2017"
+output: html_document
+---
+
+# Analysis of Data Scientists Jobs in the United States
+
+## Introduction
+Big data are becoming ubiquitous in 21th century. People are trying hard to get patterns from big data and are enthusiastic to predict the future trend. Data scientists are the names of this group of people. The have sophisticated discipline of statistics and rigorous training in computer science and blend the two disciplines into a harmonious and united entity. There are an increasing number of people who have eager to become a member of the data scientist team and what they pay attention most are the most common skills that employers look for and the most unique skills that would make employers impressive. Moreover, understanding  what types of companies employ the most data scientists could help job seekers get an overview of their future job fields and get a sense of whether the jobs would match their life goals. “Glassdoor”, one of most popular job search websites, was used as data evidence in this analysis to answer the above questions. 
+
+
+## Method
+
+
+## Result 
+
+## Discussion
