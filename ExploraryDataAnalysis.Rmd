@@ -1,0 +1,96 @@
+---
+title: "Exploratory Data Analysis"
+author: "Shulin Qing"
+date: "October 8, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(xlsx)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+df = read.csv("/Users/bestshulin/Desktop/MyProject/glassdoor_dataset2.csv",stringsAsFactors = FALSE,na.strings = "NA")
+#The raw data set contains 596 data entries
+#check missingness 
+#city
+df$city[df$city == "#N/A"] = NA
+table(is.na(df$city)) #0 missing
+#state
+df$state[df$state == "#N/A"] = NA
+table(is.na(df$state)) #19 missing, 3.2%
+#jobtitle
+df$jobtitle[df$jobtitle == "#N/A"] = NA
+table(is.na(df$jobtitle)) #0 missing
+#industry
+df$industry[df$industry == "#N/A"] = NA
+table(is.na(df$industry)) #46 missing, 7.7%
+#company size
+df$companysize[df$companysize == "#N/A"] = NA
+table(is.na(df$companysize)) #4 missing, 0.67%
+#Because the missing cases of each variable are less than 10% of the total data, I removed all missing data for later data analysis
+mydata = df[complete.cases(df),] #The cleaned data set contains 531 data entries
+
+#State
+mydata$state =gsub("^ ","", mydata$state, perl=T) #trim the leading space
+nchar(mydata$state)
+#recode 
+mydata$state[mydata$state == "Los Angeles"] = "CA"
+mydata$state[mydata$state == "Arapahoe"] = " CO"
+table(mydata$state)
+mydata1 = group_by(mydata,state) %>% summarize(count = n()) %>% arrange(desc(count))
+mydata2 = mydata1[1:13,]
+data_plot1 = filter(mydata,state %in% mydata2$state)
+data_plot1$rank[data_plot1$state == "CA"] = 1
+data_plot1$rank[data_plot1$state == "NY"] = 2
+data_plot1$rank[data_plot1$state == "MA"] = 3
+data_plot1$rank[data_plot1$state == "IL"] = 4
+data_plot1$rank[data_plot1$state == "VA"] = 5
+data_plot1$rank[data_plot1$state == "TX"] = 6
+data_plot1$rank[data_plot1$state == "WA"] = 7
+data_plot1$rank[data_plot1$state == "NC"] = 8
+data_plot1$rank[data_plot1$state == "MD"] = 9
+data_plot1$rank[data_plot1$state == "GA"] = 10
+data_plot1$rank[data_plot1$state == "NJ"] = 11
+data_plot1$rank[data_plot1$state == "PA"] = 12
+data_plot1$rank[data_plot1$state == "WI"] = 13
+
+bar <-  ggplot(data = data_plot1,aes(x = reorder(state,-rank))) + geom_bar(width = 0.5)+geom_text(stat='count',aes(x = state,label=..count..),hjust = -0.6)+ labs(x = "State", y = "Count") 
+
+bar + coord_flip()
+
+#city/state
+data_cs= unite(mydata,citystate,city,state,sep = " ")
+data_cs1 = group_by(data_cs,citystate) %>% summarize(count = n()) %>% arrange(desc(count))
+data_cs2 = data_cs1[1:11,]
+data_plot2 = filter(data_cs,citystate %in% data_cs2$citystate)
+data_plot2$rank[data_plot2$citystate == "New York NY"] = 1
+data_plot2$rank[data_plot2$citystate == "San Francisco CA"] = 2
+data_plot2$rank[data_plot2$citystate == "Chicago IL"] = 3
+data_plot2$rank[data_plot2$citystate == "Cambridge MA"] = 4
+data_plot2$rank[data_plot2$citystate == "Boston MA"] = 5
+data_plot2$rank[data_plot2$citystate == "Los Angeles CA"] = 6
+data_plot2$rank[data_plot2$citystate == "San Diego CA"] = 7
+data_plot2$rank[data_plot2$citystate == "San Jose CA"] = 8
+data_plot2$rank[data_plot2$citystate == "Atlanta GA"] = 9
+data_plot2$rank[data_plot2$citystate == "Austin TX"] = 10
+data_plot2$rank[data_plot2$citystate == "Washington DC"] = 11
+
+bar <-  ggplot(data = data_plot2,aes(x = reorder(citystate,-rank))) + geom_bar(width = 0.5)+geom_text(stat='count',aes(x = citystate,label=..count..),hjust = -0.7)+ labs(x = "City / State", y = "Count") 
+bar + coord_flip()
+
+##make a summary table for data skills
+t1 = mydata[,7:20]
+total = as.numeric(apply(t1,2,sum))
+skilltable = data.frame(skill = c(rep("python",total[1]),rep("R",total[2]),rep("SAS",total[3]),rep("SQL",total[4]),rep("JAVA",total[5]),rep("Tableau",total[6]),rep("C",total[7]),rep("Perl",total[8]),rep("Excel",total[9]),rep("DeepLearning",total[10]),rep("MATLAB",total[11]),rep("StatisticalModelling",total[12]),rep("MachineLearning",total[13]),rep("Hive",total[14])))
+
+bar <-  ggplot(data = skilltable,aes(x = skill)) + geom_bar(width = 0.5)+geom_text(stat='count',aes(x = skill,label=..count..),hjust = -0.7)+ labs(x = "Skills", y = "Count") 
+
+bar + coord_flip()
+
+
+```
+
