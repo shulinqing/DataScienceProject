@@ -1,0 +1,147 @@
+---
+title: "glassdoor_webscraping"
+author: "Shulin Qing"
+date: "October 8, 2017"
+output: html_document
+---
+
+```{r section1}
+packages<-c("rvest", "knitr", "dplyr","stringr")
+
+for (i in packages){
+  if(!require(i,character.only = T,quietly=T,warn.conflicts = F)){
+    install.packages(i, repos = "http://cran.us.r-project.org")
+  }
+  require(i,character.only = T,quietly=T,warn.conflicts = F)
+}
+
+
+library(rvest)
+library(knitr)
+library(dplyr)
+library(stringr)
+```
+
+```{r section2}
+
+jobsalary <- rep(NA,1000)
+jobtitle <- rep(NA, 1000)
+jobcity <- rep(NA,1000)
+jobstate <- rep(NA,1000)
+company_name <- rep(NA,1000)
+industry <-  rep(NA,1000)
+company_size <- rep(NA,1000)
+desc <- rep(NA,1000)
+
+python <- rep(NA,1000)
+R <- rep(NA,1000)
+SAS <- rep(NA,1000)
+SQL<- rep(NA,1000)
+Java<- rep(NA,1000)
+Tableau<- rep(NA,1000)
+C<- rep(NA,1000)
+Perl<- rep(NA,1000)
+Excel<- rep(NA,1000)
+matlab<- rep(NA,1000)
+hive <- rep(NA,1000)
+
+
+
+
+
+urls <- paste0("https://www.glassdoor.com/Job/data-science-jobs-SRCH_KO0,12_IP", 1:30,".htm")
+index <- 0
+
+    
+####code
+for(i in seq_along(urls)) {
+url <- urls[i]
+fields <- url %>% read_html() %>% html_nodes(".jl")
+x <- fields %>% html_nodes(".jobLink") %>% html_attrs()
+job.urls <- paste0("https://www.glassdoor.com",
+                  unname(unlist(sapply(x, function(x) if(x["class"]=="jobLink") x["href"]))))
+job.urls <- unique(unlist(job.urls))
+
+for(j in job.urls){
+  content <- html_session(j)
+  names <-  content  %>% html_node(".padRtSm") %>% 
+                        html_text() %>% trimws()
+  if(is.na(names)){
+    next
+  }else{
+  index <- index + 1
+  ###company names
+  company_name[index] <- names
+  
+  ###job titles
+  titles_seq <- content %>% html_nodes(".strong") %>% html_text()
+  titles <- titles_seq[1]
+  jobtitle[index] <- titles
+  
+  ###locations
+  location <- content %>% html_nodes(".ib") %>% html_text() %>% trimws()
+  location1 = gsub("\\p{Pd}", "", location[2], perl=TRUE)
+  location1 = gsub("^\\s+","",location1)
+  sublocation = unlist(strsplit(location1,","))
+  jobcity[index] <- sublocation[1]
+  jobstate[index] <- sublocation[2]
+  
+  ###descriptions
+  desc <- content %>% html_node(".desc") %>% html_text()
+  #desc[index] <- desc
+  
+  ###skill sets
+  python[index] <- any(grepl("\\bpython\\b", desc, ignore.case=TRUE))
+   R[index] <- any(grepl("\\bR\\b", desc, ignore.case=TRUE))
+   SAS[index] <- any(grepl("\\bSAS\\b", desc, ignore.case=TRUE))
+   SQL[index] <- any(grepl("\\bSQL\\b", desc, ignore.case=TRUE))
+  Java[index] <- any(grepl("\\bJava\\b", desc, ignore.case=TRUE))
+  Tableau[index] <- any(grepl("\\bTableau\\b", desc, ignore.case=TRUE))
+   C[index]<- any(grepl("\\bC\\b", desc, ignore.case=TRUE))
+   Perl[index] <- any(grepl("\\bPerl\\b", desc, ignore.case=TRUE))
+   Excel[index] <- any(grepl("\\bExcel\\b", desc, ignore.case=TRUE))
+   matlab[index] <- any(grepl("\\bmatlab\\b", desc, ignore.case=TRUE))
+  hive[index] <- any(grepl("\\bhive\\b", desc, ignore.case=TRUE))
+  
+  
+  ###industries
+  thefiles <- tryCatch(suppressWarnings(readLines(j)),error = function(e){cat("ERROR:",conditionMessage(e),"\n")})
+  point <- grep("employer", thefiles)
+  thefiles <- thefiles[point[1]+ 0:20]
+  industries <- thefiles[str_detect(thefiles, "\'industry\'")] %>%str_extract("\"(.*)\"") %>% str_sub(2,-2)
+  industries = str_replace_all(industries,"&amp;","&")
+  industry[index] <- ifelse(length(industries)>0,industries,NA)
+  
+  ###company size
+  size <- thefiles[str_detect(thefiles, "\'size\'")] %>% str_extract("\"(.*)\"")%>% str_sub(2, -2)
+  size <- gsub("--1","+",size)
+  company_size[index] <- ifelse(length(size)>0,size,NA)
+  }
+}
+Sys.sleep(5)
+
+}
+
+
+###summarize into a data frame
+mydf <-  data.frame(company = company_name[1:index],city = jobcity[1:index],state = jobstate[1:index],jobtitle = jobtitle[1:index],industry = industry[1:index], companysize = company_size[1:index],python = python[1:index],R = R[1:index],SAS = SAS[1:index],SQL = SQL[1:index],JAVA = Java[1:index],Tableau = Tableau[1:index],C = C[1:index], Perl = Perl[1:index],Excel = Excel[1:index],MATLAB = matlab[1:index],HIVE = hive[1:index])
+
+#removing duplicates
+mydf <- mydf[!duplicated(mydf),]
+
+#coding T/F to 1/0
+mydf$python = ifelse(mydf$python == "TRUE",1,0)
+mydf$R = ifelse(mydf$R == "TRUE",1,0)
+mydf$SAS = ifelse(mydf$SAS == "TRUE",1,0)
+mydf$SQL = ifelse(mydf$SQL == "TRUE",1,0)
+mydf$JAVA = ifelse(mydf$JAVA == "TRUE",1,0)
+mydf$Tableau = ifelse(mydf$Tableau == "TRUE",1,0)
+mydf$Perl = ifelse(mydf$Perl == "TRUE",1,0)
+mydf$Excel = ifelse(mydf$Excel == "TRUE",1,0)
+mydf$MATLAB = ifelse(mydf$MATLAB == "TRUE",1,0)
+mydf$C = ifelse(mydf$C == "TRUE",1,0)
+mydf$HIVE = ifelse(mydf$HIVE == "TRUE",1,0)
+
+
+#write.xlsx(mydf,file = "glassdoor_dataset.xlsx")
+```
